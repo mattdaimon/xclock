@@ -90,14 +90,14 @@
 
       function drawSecondHand(cx, cy, angle, radius) {
         const length = radius * 0.935;
-        const diamondCenter = radius * 0.84;
-        const diamondHalfLength = radius * 0.090;
-        const diamondHalfWidth = radius * 0.040;
+        const diamondCenter = radius * 0.80;
+        const diamondHalfLength = radius * 0.115;
+        const diamondHalfWidth = radius * 0.052;
         const start = point(cx, cy, angle, 0);
         const tip = point(cx, cy, angle, length);
 
         ctx.strokeStyle = "#000000";
-        ctx.lineWidth = Math.max(1.2, radius * 0.010);
+        ctx.lineWidth = Math.max(1.5, radius * 0.013);
         ctx.lineCap = "butt";
         ctx.beginPath();
         ctx.moveTo(start.x, start.y);
