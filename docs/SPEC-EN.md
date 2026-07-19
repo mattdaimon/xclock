@@ -4,9 +4,9 @@
 
 This document records the design specification of the HTML5 Canvas version of xclock.
 
-- Current version: v1.1.0
-- v1.1.0 preserves the standard v1.0.1 display and adds an optional second hand
-- This document records the values and behavior implemented in v1.1.0
+- Current version: v1.1.1
+- v1.1.1 keeps the v1.1.0 second-hand feature while bringing the standard minute-hand position and second-hand shape closer to the original xclock
+- This document records the values and behavior implemented in v1.1.1
 
 The README files are user-facing documents. This specification describes internal behavior, design decisions, and the relationship to the original X11 xclock.
 
@@ -27,7 +27,7 @@ This is a small analog clock inspired by the classic X11 `xclock`.
 - Do not port the original C/X11 implementation literally
 - Prefer simple, readable, Canvas-native drawing code
 - Keep the second hand disabled by default
-- Preserve the standard v1.0.1 appearance and behavior
+- Preserve the standard no-second-hand display and one-minute redraw interval
 - Avoid excessive configuration options
 - Avoid large-scale class design, module splitting, or duplicated clock implementations
 - Prioritize practical personal usability
@@ -129,18 +129,20 @@ Rear extension:
 Math.max(1.5, radius * 0.017)
 ```
 
-## 8. v1.0.1 Time Calculation
+## 8. v1.1.1 Time Calculation
 
-The standard mode without a second hand keeps the current calculation.
+Regardless of whether the second hand is enabled, the minute-hand position includes the current second value. This matches the hand-position calculation of the original xclock.
 
 ```javascript
-const minutes = now.getMinutes();
-const hours = (now.getHours() % 12) + minutes / 60;
+const seconds = now.getSeconds();
+const minutes = now.getMinutes() + seconds / 60;
+const hours = (now.getHours() % 12) + now.getMinutes() / 60;
 ```
 
-- The minute hand points to an integer minute
-- The hour hand includes the minute value
-- Seconds do not affect either hand
+- The minute hand includes seconds in its position
+- The hour hand includes minutes
+- Seconds do not affect the hour hand
+- With the second hand disabled, the redraw interval remains one minute
 
 ## 9. v1.0.1 Update Scheduling
 
@@ -246,23 +248,23 @@ Let the clock-face radius be `radius`.
 
 ```javascript
 const length = radius * 0.935;
-const diamondCenter = radius * 0.84;
-const diamondHalfLength = radius * 0.090;
-const diamondHalfWidth = radius * 0.040;
-const lineWidth = Math.max(1, radius * 0.008);
+const diamondCenter = radius * 0.80;
+const diamondHalfLength = radius * 0.105;
+const diamondHalfWidth = radius * 0.045;
+const lineWidth = Math.max(1.5, radius * 0.013);
 ```
 
-- The second-hand length is 90% of the radius
-- The diamond center is at 82% of the radius
-- The diamond's full length along the hand is 9% of the radius
-- The diamond's full width is 5% of the radius
-- A line equal to 3.5% of the radius remains beyond the front of the diamond
+- The second-hand length is 93.5% of the radius
+- The diamond center is at 80% of the radius
+- The diamond's full length along the hand is 21% of the radius
+- The diamond's full width is 9% of the radius
+- A line equal to 3% of the radius remains beyond the front of the diamond
 - The second hand is longer than the minute hand
-- The line width has a minimum of 1 CSS pixel
+- The line width has a minimum of 1.5 CSS pixels
 
-## 12. v1.1.0 Hand Movement
+## 12. v1.1.1 Hand Movement
 
-When the second hand is enabled, hand movement follows the original xclock behavior.
+Regardless of whether the second hand is enabled, hand-position calculations follow the original xclock behavior.
 
 ### 12.1 Second Hand
 
@@ -278,7 +280,8 @@ const seconds = now.getSeconds();
 ### 12.2 Minute Hand
 
 - Includes seconds in its position
-- Moves slightly every second
+- With the second hand enabled, it moves slightly every second
+- With the second hand disabled, it includes the current second value whenever the clock is redrawn
 
 ```javascript
 const minutes = now.getMinutes() + now.getSeconds() / 60;
@@ -295,7 +298,7 @@ const hours =
   (now.getHours() % 12) + now.getMinutes() / 60;
 ```
 
-Movement summary:
+With the second hand enabled:
 
 ```text
 Second hand: moves once per second
@@ -303,7 +306,16 @@ Minute hand: moves slightly once per second
 Hour hand: moves slightly once per minute
 ```
 
-## 13. v1.1.0 Update Scheduling
+With the second hand disabled:
+
+```text
+Second hand: not drawn
+Minute hand: points to the position including the second value at redraw time
+Hour hand: points to the position including the minute value
+Redraw: at each minute boundary
+```
+
+## 13. v1.1.1 Update Scheduling
 
 ### 13.1 Generalized Timer
 
@@ -328,7 +340,7 @@ The current time is read again after every timer event, so delay does not accumu
 
 ### 13.3 Second Hand Disabled
 
-Keep the v1.0.1 behavior and wait until the next minute boundary.
+Wait until the next minute boundary. The minute-hand position includes the second value at the time of drawing, while the redraw interval remains one minute.
 
 ### 13.4 Timer Margin
 
@@ -508,18 +520,17 @@ Internal dimensions, calculation formulas, and drawing details will remain in th
 
 ## 20. Versioning
 
-The planned version is `v1.1.0`.
+This release is `v1.1.1`.
 
-- Adds a second-hand feature
-- Adds a URL option
-- Adds one-second update behavior
-- Adds batch-file settings
-- Preserves compatibility with the standard behavior
+- Refines the second-hand diamond to more closely match the original xclock
+- Includes seconds in the standard-mode minute-hand position
+- Preserves the standard one-minute redraw interval and existing URL/batch options
+- Updates the Japanese and English specifications to match the implementation
 
-Under the common `MAJOR.MINOR.PATCH` convention, this is a backward-compatible feature addition, so the MINOR number increases.
+Under the common `MAJOR.MINOR.PATCH` convention, this is a PATCH release because it refines and corrects existing behavior.
 
 ```text
-v1.0.1 → v1.1.0
+v1.1.0 → v1.1.1
 ```
 
 ## 21. Post-Implementation Test Checklist

@@ -128,9 +128,7 @@
 
         const now = new Date();
         const seconds = now.getSeconds();
-        const minutes = showSeconds
-          ? now.getMinutes() + seconds / 60
-          : now.getMinutes();
+        const minutes = now.getMinutes() + seconds / 60;
         const hours = (now.getHours() % 12) + now.getMinutes() / 60;
 
         if (showSeconds) {
