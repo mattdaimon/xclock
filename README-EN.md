@@ -1,0 +1,190 @@
+xclock
+======
+
+[Japanese](README.md)
+
+A HTML5 implementation inspired by the classic X11 xclock.
+
+This small project started because I simply wanted xclock on a locked-down Windows PC.
+
+It is not intended to be a pixel-perfect clone.
+Instead, it is a reimplementation that respects the original design while making it practical to use on modern Windows systems.
+
+Respect xclock!!
+
+Screenshot
+-----------
+
+![xclock running on Windows](images/screenshot.png)
+
+Development
+-----------
+
+The author designed and reviewed this small program,
+using ChatGPT for implementation and documentation.
+
+Contents
+--------
+
+- xclock.html   Main program
+- xclock.ico    Icon
+- xclock.bat    Chrome app-mode launcher
+- README.md     Japanese README
+- README-EN.md  This document
+- LICENSE.txt   MIT License
+
+
+Features
+--------
+
+- Single HTML file
+- HTML5 Canvas and JavaScript only
+- No external libraries
+- Analog clock without a second hand
+- Hands move once per minute
+- The next update is aligned to the start of each minute
+- Corrects the display after Chrome resumes from suspension
+- Automatically fits a square canvas to the window
+- Designed for Chrome app mode
+- Uses a dedicated Chrome user-data directory so that the 200 x 200
+  xclock window does not affect the normal Chrome window size
+
+
+Installation
+------------
+
+1. Copy the entire xclock folder to any location.
+
+   Example:
+
+     C:\Users\username\AppData\Local\Programs\xclock\
+
+2. Keep the following files in the same folder:
+
+     - xclock.bat
+     - xclock.html
+     - xclock.ico
+
+3. Double-click xclock.bat and confirm that the clock opens.
+
+The batch file uses its own location to find xclock.html, so the folder can
+be moved as long as xclock.bat and xclock.html remain together.
+
+
+Recommended shortcut setup
+--------------------------
+
+1. Right-click xclock.bat.
+2. Select "Show more options" if necessary.
+3. Select "Send to" -> "Desktop (create shortcut)".
+4. Open the shortcut properties.
+5. On the "Shortcut" tab, set "Run" to "Minimized".
+6. Select "Change Icon" and choose xclock.ico in the xclock folder.
+7. Rename the shortcut to "xclock".
+
+Setting "Run" to "Minimized" prevents the Command Prompt window used by the
+batch file from being conspicuous when xclock starts.
+
+
+Chrome profile separation
+-------------------------
+
+xclock.bat starts Chrome with this dedicated profile folder:
+
+  %LOCALAPPDATA%\xclock-chrome-profile
+
+This is separate from the normal Chrome profile. Therefore, xclock's
+200 x 200 window size and position should not affect ordinary Chrome windows.
+
+The dedicated folder is created automatically on first launch.
+
+It may be deleted to reset only the xclock Chrome profile. Close xclock before
+deleting it.
+
+
+Startup
+-------
+
+To start xclock automatically when signing in to Windows:
+
+1. Press Win + R.
+2. Enter:
+
+     shell:startup
+
+3. Place the xclock shortcut in the Startup folder.
+
+Place the shortcut there, not a separate copy of xclock.bat. This preserves
+the shortcut's "Minimized" setting and selected icon.
+
+
+Always on top
+-------------
+
+Windows does not provide a built-in always-on-top option for this HTML file.
+
+Microsoft PowerToys can be used:
+
+  Win + Ctrl + T
+
+Press the shortcut while the xclock window is active.
+
+
+Configuration
+-------------
+
+Window size is specified in xclock.bat:
+
+  --window-size=200,200
+
+Change both values to use another initial size.
+
+The clock itself redraws to fit the current window.
+
+
+Chrome location
+---------------
+
+The batch file expects Chrome at:
+
+  C:\Program Files\Google\Chrome\Application\chrome.exe
+
+When Chrome is installed elsewhere, edit the CHROME line in xclock.bat.
+
+
+Troubleshooting
+---------------
+
+1. "The file cannot be accessed"
+
+   Confirm that xclock.bat and xclock.html are in the same folder.
+   Do not rename xclock.html unless xclock.bat is changed as well.
+
+2. xclock opens in a normal Chrome tab
+
+   Close all xclock windows and launch it again from xclock.bat.
+   Confirm that the dedicated profile folder is writable.
+
+3. Normal Chrome opens at 200 x 200
+
+   Confirm that xclock was launched using xclock.bat. The supplied batch file
+   uses a dedicated Chrome user-data directory.
+
+   Restore the normal Chrome window to the desired size, then close that
+   window last so Chrome saves the new placement.
+
+4. A black Command Prompt window briefly appears
+
+   Create a shortcut to xclock.bat and set the shortcut's "Run" option to
+   "Minimized" as described above.
+
+5. Japanese or other non-ASCII user names
+
+   The supplied batch file converts the local Windows path into a file URL
+   automatically. No user name needs to be written directly in the command.
+
+
+License
+-------
+
+MIT License. See LICENSE.txt.
