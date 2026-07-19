@@ -3,7 +3,7 @@ setlocal
 
 set "CHROME=C:\Program Files\Google\Chrome\Application\chrome.exe"
 set "XCLOCK_PROFILE=%LOCALAPPDATA%\xclock-chrome-profile"
-set "XCLOCK_HTML=%~dp0xclock.html"
+set "XCLOCK_HTML=%~dp0index.html"
 
 if not exist "%CHROME%" (
   echo Google Chrome was not found:
@@ -13,7 +13,7 @@ if not exist "%CHROME%" (
 )
 
 if not exist "%XCLOCK_HTML%" (
-  echo xclock.html was not found:
+  echo index.html was not found:
   echo %XCLOCK_HTML%
   pause
   exit /b 1

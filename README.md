@@ -26,7 +26,7 @@ Respect xclock!!
 内容
 ----
 
-- xclock.html    メインプログラム
+- index.html    メインプログラム
 - xclock.ico     アイコン
 - xclock.bat     Chromeアプリモード用ランチャー
 - README.md      この日本語版README
@@ -63,13 +63,13 @@ Respect xclock!!
 2. 次のファイルを同じフォルダに置いてください。
 
      - xclock.bat
-     - xclock.html
+     - index.html
      - xclock.ico
 
 3. xclock.batをダブルクリックし、時計が開くことを確認します。
 
-バッチファイルは、自身が置かれている場所を基準にxclock.htmlを探します。
-そのため、xclock.batとxclock.htmlを一緒に移動する限り、
+バッチファイルは、自身が置かれている場所を基準にindex.htmlを探します。
+そのため、xclock.batとindex.htmlを一緒に移動する限り、
 フォルダの場所を変更しても動作します。
 
 
@@ -161,8 +161,8 @@ xclock.batのCHROME行を編集してください。
 
 1. 「ファイルにアクセスできません」と表示される
 
-   xclock.batとxclock.htmlが同じフォルダにあることを確認してください。
-   xclock.bat側も変更する場合を除き、xclock.htmlの名前を変更しないでください。
+   xclock.batとindex.htmlが同じフォルダにあることを確認してください。
+   xclock.bat側も変更する場合を除き、index.htmlの名前を変更しないでください。
 
 2. xclockが通常のChromeタブで開く
 

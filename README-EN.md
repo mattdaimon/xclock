@@ -26,7 +26,7 @@ using ChatGPT for implementation and documentation.
 Contents
 --------
 
-- xclock.html   Main program
+- index.html   Main program
 - xclock.ico    Icon
 - xclock.bat    Chrome app-mode launcher
 - README.md     Japanese README
@@ -62,13 +62,13 @@ Installation
 2. Keep the following files in the same folder:
 
      - xclock.bat
-     - xclock.html
+     - index.html
      - xclock.ico
 
 3. Double-click xclock.bat and confirm that the clock opens.
 
-The batch file uses its own location to find xclock.html, so the folder can
-be moved as long as xclock.bat and xclock.html remain together.
+The batch file uses its own location to find index.html, so the folder can
+be moved as long as xclock.bat and index.html remain together.
 
 
 Recommended shortcut setup
@@ -157,8 +157,8 @@ Troubleshooting
 
 1. "The file cannot be accessed"
 
-   Confirm that xclock.bat and xclock.html are in the same folder.
-   Do not rename xclock.html unless xclock.bat is changed as well.
+   Confirm that xclock.bat and index.html are in the same folder.
+   Do not rename index.html unless xclock.bat is changed as well.
 
 2. xclock opens in a normal Chrome tab
 
