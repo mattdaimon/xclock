@@ -17,6 +17,10 @@ Screenshot
 
 ![xclock running on Windows](images/screenshot.png)
 
+## Web version
+
+https://mattdaimon.github.io/xclock/
+
 Development
 -----------
 
