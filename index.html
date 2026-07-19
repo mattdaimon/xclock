@@ -21,10 +21,14 @@
     (() => {
       "use strict";
 
+      const params = new URLSearchParams(window.location.search);
+      const showSeconds = params.get("seconds") === "1";
+
       const canvas = document.getElementById("clock");
       const ctx = canvas.getContext("2d");
       let cssSize = 0;
       let dpr = 1;
+      let timerId = null;
 
       function resizeCanvas() {
         cssSize = Math.floor(Math.min(window.innerWidth, window.innerHeight));
@@ -84,6 +88,29 @@
         fillPolygon([tip, leftBase, rightBase]);
       }
 
+      function drawSecondHand(cx, cy, angle, radius) {
+        const length = radius * 0.935;
+        const diamondCenter = radius * 0.84;
+        const diamondHalfLength = radius * 0.090;
+        const diamondHalfWidth = radius * 0.040;
+        const start = point(cx, cy, angle, 0);
+        const tip = point(cx, cy, angle, length);
+
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = Math.max(1.2, radius * 0.010);
+        ctx.lineCap = "butt";
+        ctx.beginPath();
+        ctx.moveTo(start.x, start.y);
+        ctx.lineTo(tip.x, tip.y);
+        ctx.stroke();
+
+        const front = point(cx, cy, angle, diamondCenter + diamondHalfLength);
+        const right = point(cx, cy, angle, diamondCenter, diamondHalfWidth);
+        const back = point(cx, cy, angle, diamondCenter - diamondHalfLength);
+        const left = point(cx, cy, angle, diamondCenter, -diamondHalfWidth);
+        fillPolygon([front, right, back, left]);
+      }
+
       function drawClock() {
         const rect = canvas.getBoundingClientRect();
         const width = rect.width;
@@ -100,8 +127,15 @@
         drawTicks(cx, cy, radius);
 
         const now = new Date();
-        const minutes = now.getMinutes();
-        const hours = (now.getHours() % 12) + minutes / 60;
+        const seconds = now.getSeconds();
+        const minutes = showSeconds
+          ? now.getMinutes() + seconds / 60
+          : now.getMinutes();
+        const hours = (now.getHours() % 12) + now.getMinutes() / 60;
+
+        if (showSeconds) {
+          drawSecondHand(cx, cy, (seconds / 60) * Math.PI * 2, radius);
+        }
 
         drawTriangleHand(cx, cy, (hours / 12) * Math.PI * 2, radius, 0.40, 0.068);
         drawTriangleHand(cx, cy, (minutes / 60) * Math.PI * 2, radius, 0.68, 0.068);
@@ -111,20 +145,19 @@
         ctx.fill();
       }
 
-      let minuteTimerId = null;
-
-      function scheduleNextMinute() {
-        if (minuteTimerId !== null) {
-          clearTimeout(minuteTimerId);
+      function scheduleNextDraw() {
+        if (timerId !== null) {
+          clearTimeout(timerId);
         }
 
         const now = new Date();
-        const delay =
-          (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
+        const delay = showSeconds
+          ? 1000 - now.getMilliseconds()
+          : (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
 
-        minuteTimerId = setTimeout(() => {
+        timerId = setTimeout(() => {
           drawClock();
-          scheduleNextMinute();
+          scheduleNextDraw();
         }, delay);
       }
 
@@ -136,13 +169,13 @@
       document.addEventListener("visibilitychange", () => {
         if (!document.hidden) {
           drawClock();
-          scheduleNextMinute();
+          scheduleNextDraw();
         }
       });
 
       resizeCanvas();
       drawClock();
-      scheduleNextMinute();
+      scheduleNextDraw();
     })();
   </script>
 </body>

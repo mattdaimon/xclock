@@ -19,7 +19,13 @@ Screenshot
 
 ## Web version
 
+Default (without second hand):
+
 https://mattdaimon.github.io/xclock/
+
+With second hand:
+
+https://mattdaimon.github.io/xclock/?seconds=1
 
 Development
 -----------
@@ -36,6 +42,8 @@ Contents
 - README.md     Japanese README
 - README-EN.md  This document
 - LICENSE.txt   MIT License
+- docs/SPEC.md   Japanese specification
+- docs/SPEC-EN.md English specification
 
 
 Features
@@ -44,9 +52,11 @@ Features
 - Single HTML file
 - HTML5 Canvas and JavaScript only
 - No external libraries
-- Analog clock without a second hand
-- Hands move once per minute
-- The next update is aligned to the start of each minute
+- Analog clock without a second hand by default
+- Optional xclock-style second hand with `?seconds=1`
+- One-second step movement when the second hand is enabled
+- With seconds enabled, the minute hand advances each second and the hour hand advances once per minute
+- The next update is aligned to the next second or minute boundary
 - Corrects the display after Chrome resumes from suspension
 - Automatically fits a square canvas to the window
 - Designed for Chrome app mode
@@ -137,13 +147,24 @@ Press the shortcut while the xclock window is active.
 Configuration
 -------------
 
-Window size is specified in xclock.bat:
+The settings most likely to be changed are grouped at the top of xclock.bat:
 
-  --window-size=200,200
+  set "WINDOW_WIDTH=200"
+  set "WINDOW_HEIGHT=200"
+  set "SHOW_SECONDS=0"
 
-Change both values to use another initial size.
-
+Change `WINDOW_WIDTH` and `WINDOW_HEIGHT` to use another initial size.
 The clock itself redraws to fit the current window.
+
+To display the second hand, change the setting to:
+
+  set "SHOW_SECONDS=1"
+
+For the Web version, append `?seconds=1` to the URL:
+
+  https://mattdaimon.github.io/xclock/?seconds=1
+
+The only enabled value is `1`. No parameter, `0`, `true`, and other values keep the second hand hidden.
 
 
 Chrome location
