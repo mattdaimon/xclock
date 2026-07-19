@@ -17,6 +17,10 @@ Respect xclock!!
 
 ![Windows上で動作するxclock](images/screenshot.png)
 
+## Web版
+
+https://mattdaimon.github.io/xclock/
+
 開発について
 ------------
 
