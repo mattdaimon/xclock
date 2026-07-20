@@ -166,11 +166,14 @@ On window resize:
 
 ### 9.3 Visibility Restoration
 
-When the page becomes visible again:
+When the page becomes visible again, the application waits 300 milliseconds so that browsers such as Android browsers can finish restoring the viewport. It then:
 
-1. Redraw immediately using the current time
-2. Clear the previous timer
-3. Schedule the next minute-boundary update
+1. Recalculates the Canvas size
+2. Redraws using the current time
+3. Clears the previous timer
+4. Schedules the next second or minute boundary update
+
+This reduces the chance that the clock appears smaller and shifted to the left after the browser has been backgrounded and the device has slept.
 
 ## 10. v1.1.0 Second-Hand Option
 

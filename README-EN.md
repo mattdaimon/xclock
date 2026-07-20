@@ -58,6 +58,7 @@ Features
 - With seconds enabled, the minute hand advances each second and the hour hand advances once per minute
 - The next update is aligned to the next second or minute boundary
 - Corrects the display after Chrome resumes from suspension
+- Readjusts the Canvas size after an Android browser resumes from device sleep
 - Automatically fits a square canvas to the window
 - Designed for Chrome app mode
 - Uses a dedicated Chrome user-data directory so that the 200 x 200

@@ -166,8 +166,11 @@
 
       document.addEventListener("visibilitychange", () => {
         if (!document.hidden) {
-          drawClock();
-          scheduleNextDraw();
+          setTimeout(() => {
+            resizeCanvas();
+            drawClock();
+            scheduleNextDraw();
+          }, 300);
         }
       });
 

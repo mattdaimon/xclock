@@ -58,6 +58,7 @@ https://mattdaimon.github.io/xclock/?seconds=1
 - 秒針表示時は分針が毎秒少し進み、時針は1分ごとに進む
 - 次回更新を秒または分の境界に合わせて実行
 - Chromeが休止状態から復帰した後に表示時刻を補正
+- Androidブラウザのスリープ復帰後にCanvasサイズを再調整
 - ウィンドウに合わせて正方形のCanvasを自動調整
 - Chromeアプリモード向け
 - 専用のChromeユーザーデータディレクトリを使用するため、
