@@ -4,9 +4,10 @@
 
 This document records the design specification of the HTML5 Canvas version of xclock.
 
-- Current version: v1.1.1
-- v1.1.1 keeps the v1.1.0 second-hand feature while bringing the standard minute-hand position and second-hand shape closer to the original xclock
-- This document records the values and behavior implemented in v1.1.1
+- Current version: v1.1.3
+- Keeps the clock display, second-hand behavior, and Android resume handling from v1.1.2
+- v1.1.3 adds support for Windows paths containing Japanese and other non-ASCII characters
+- This document records the values and behavior implemented in v1.1.3
 
 The README files are user-facing documents. This specification describes internal behavior, design decisions, and the relationship to the original X11 xclock.
 
@@ -455,7 +456,6 @@ Only when enabled, the batch file creates a query string.
 
 ```bat
 set "XCLOCK_QUERY="
-set "XCLOCK_URL_PATH=%XCLOCK_HTML:\=/%"
 
 if "%SHOW_SECONDS%"=="1" (
   set "XCLOCK_QUERY=?seconds=1"
@@ -464,21 +464,53 @@ if "%SHOW_SECONDS%"=="1" (
 
 ### 17.3 Local file URL
 
-Keep the existing working Windows-path conversion and append only the query string.
+Do not convert the Windows path obtained from `%~dp0` by plain string replacement.
+Because the path may contain Japanese, spaces, or other non-ASCII characters,
+use PowerShell and `System.Uri` to generate a valid file URL.
 
 ```bat
---app="file:///%XCLOCK_URL_PATH%%XCLOCK_QUERY%"
+for /f "usebackq delims=" %%I in (`
+  powershell.exe -NoProfile -Command ^
+  "[System.Uri]::new((Get-Item -LiteralPath $env:XCLOCK_HTML).FullName).AbsoluteUri"
+`) do set "XCLOCK_URL=%%I"
 ```
 
-Example:
+Processing steps:
 
-```text
-file:///C:/path/to/xclock/index.html?seconds=1
+1. Obtain the HTML file in the batch-file folder with `%~dp0index.html`
+2. Read the target with `Get-Item -LiteralPath`
+3. Obtain its absolute path with `FullName`
+4. Convert it into a valid file URL with `System.Uri.AbsoluteUri`
+5. Capture the PowerShell output in `XCLOCK_URL` with `for /f`
+
+Append the second-hand query string to the converted URL when Chrome starts.
+
+```bat
+--app="%XCLOCK_URL%%XCLOCK_QUERY%"
 ```
 
-Chrome opens `index.html` as a local file and exposes `?seconds=1` to the page as the URL query string.
+If URL conversion fails, do not start Chrome and display an error.
 
-### 17.4 Window Size
+```bat
+if not defined XCLOCK_URL (
+  echo Failed to create the file URL:
+  echo "%XCLOCK_HTML%"
+  pause
+  exit /b 1
+)
+```
+
+### 17.4 PowerShell dependency
+
+Starting with v1.1.3, `xclock.bat` uses Windows PowerShell `powershell.exe`.
+Its purpose is only to convert a local Windows path into a valid file URL.
+No `.ps1` file is used. `-NoProfile` prevents the user's PowerShell profile
+from being loaded.
+
+Environments where PowerShell itself is disabled by organizational security
+policy are outside the supported scope of the batch launcher.
+
+### 17.5 Window Size
 
 Replace the current fixed option:
 
@@ -523,17 +555,18 @@ Internal dimensions, calculation formulas, and drawing details will remain in th
 
 ## 20. Versioning
 
-This release is `v1.1.1`.
+This release is `v1.1.3`.
 
-- Refines the second-hand diamond to more closely match the original xclock
-- Includes seconds in the standard-mode minute-hand position
-- Preserves the standard one-minute redraw interval and existing URL/batch options
-- Updates the Japanese and English specifications to match the implementation
+- Fixes startup from Windows paths containing Japanese or other non-ASCII characters
+- Uses PowerShell and `System.Uri` to generate a valid file URL
+- Stops before launching Chrome when URI conversion fails
+- Keeps the clock display, second-hand behavior, and Android resume handling unchanged
+- Updates the Japanese and English README and specification documents
 
-Under the common `MAJOR.MINOR.PATCH` convention, this is a PATCH release because it refines and corrects existing behavior.
+Under the common `MAJOR.MINOR.PATCH` convention, this is a PATCH release because it corrects compatibility in the existing Windows launcher.
 
 ```text
-v1.1.0 → v1.1.1
+v1.1.2 → v1.1.3
 ```
 
 ## 21. Post-Implementation Test Checklist
@@ -586,6 +619,10 @@ v1.1.0 → v1.1.1
 - `SHOW_SECONDS=1` enables it
 - Width and height settings work
 - Chrome path, profile path, and HTML path remain configurable
+- Starts from user names and folder names containing Japanese characters
+- Starts from folder paths containing spaces
+- Converts the `index.html` path into a valid file URL
+- Does not start Chrome when URI conversion fails
 - The local file URL query is passed correctly
 - Existing Chrome app-mode startup remains functional
 

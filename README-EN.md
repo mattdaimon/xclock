@@ -59,6 +59,7 @@ Features
 - The next update is aligned to the next second or minute boundary
 - Corrects the display after Chrome resumes from suspension
 - Readjusts the Canvas size after an Android browser resumes from device sleep
+- Supports Windows paths containing Japanese and other non-ASCII characters
 - Automatically fits a square canvas to the window
 - Designed for Chrome app mode
 - Uses a dedicated Chrome user-data directory so that the 200 x 200
@@ -206,8 +207,14 @@ Troubleshooting
 
 5. Japanese or other non-ASCII user names
 
-   The supplied batch file converts the local Windows path into a file URL
-   automatically. No user name needs to be written directly in the command.
+   The supplied batch file uses PowerShell to convert the local Windows path
+   into a valid file URL.
+
+   User names and folder names containing Japanese or other non-ASCII characters
+   are supported. No user name needs to be written directly in the command.
+
+   xclock.bat may not work when PowerShell is disabled by an organizational
+   security policy.
 
 
 License

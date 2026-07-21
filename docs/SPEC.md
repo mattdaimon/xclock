@@ -4,9 +4,10 @@
 
 この文書は、HTML5 Canvas版 xclock の設計仕様を記録する。
 
-- 現行版: v1.1.1
-- v1.1.0 の秒針機能を維持し、標準表示の分針位置と秒針形状をオリジナル xclock へさらに近づけた
-- 本書には v1.1.1 で実装した値と動作を記録する
+- 現行版: v1.1.3
+- v1.1.2 までの時計表示、秒針、Android 復帰処理を維持する
+- v1.1.3 では、日本語など非 ASCII 文字を含む Windows パスに対応する
+- 本書には v1.1.3 で実装した値と動作を記録する
 
 README は利用者向けの説明を担当し、本書は内部仕様、設計判断、オリジナル xclock との対応関係を担当する。
 
@@ -457,7 +458,6 @@ rem ============================================================
 
 ```bat
 set "XCLOCK_QUERY="
-set "XCLOCK_URL_PATH=%XCLOCK_HTML:\=/%"
 
 if "%SHOW_SECONDS%"=="1" (
   set "XCLOCK_QUERY=?seconds=1"
@@ -466,21 +466,53 @@ if "%SHOW_SECONDS%"=="1" (
 
 ### 17.3 ローカル file URL
 
-現在正常に動作している Windows パス変換を維持し、その末尾へクエリ文字列を追加する。
+`%~dp0` で取得した Windows パスを文字列置換だけで file URL へ変換しない。
+日本語、空白、その他の非 ASCII 文字を含む可能性があるため、PowerShell の
+`System.Uri` を使用して正規の file URL を生成する。
 
 ```bat
---app="file:///%XCLOCK_URL_PATH%%XCLOCK_QUERY%"
+for /f "usebackq delims=" %%I in (`
+  powershell.exe -NoProfile -Command ^
+  "[System.Uri]::new((Get-Item -LiteralPath $env:XCLOCK_HTML).FullName).AbsoluteUri"
+`) do set "XCLOCK_URL=%%I"
 ```
 
-例:
+処理内容:
 
-```text
-file:///C:/path/to/xclock/index.html?seconds=1
+1. `%~dp0index.html` で BAT ファイルと同じフォルダーの HTML を取得する
+2. `Get-Item -LiteralPath` で対象ファイルを取得する
+3. `FullName` で絶対パスを取得する
+4. `System.Uri.AbsoluteUri` で正規の file URL へ変換する
+5. PowerShell の標準出力を `for /f` で `XCLOCK_URL` へ格納する
+
+Chrome 起動時は、変換済み URL へ秒針用クエリ文字列を付加する。
+
+```bat
+--app="%XCLOCK_URL%%XCLOCK_QUERY%"
 ```
 
-Chrome は `index.html` をローカルファイルとして開き、`?seconds=1` をページのクエリ文字列として解釈する。
+URI 変換結果を取得できなかった場合は、Chrome を起動せずエラーを表示する。
 
-### 17.4 ウィンドウサイズ
+```bat
+if not defined XCLOCK_URL (
+  echo Failed to create the file URL:
+  echo "%XCLOCK_HTML%"
+  pause
+  exit /b 1
+)
+```
+
+### 17.4 PowerShell 依存
+
+v1.1.3 以降の `xclock.bat` は Windows PowerShell の `powershell.exe` を使用する。
+目的は Windows のローカルファイルパスを正規の file URL へ変換することであり、
+`.ps1` ファイルは使用しない。`-NoProfile` を指定し、ユーザーの PowerShell
+プロファイルを読み込まない。
+
+PowerShell 自体が組織のセキュリティポリシーで無効化されている環境は、
+BAT ランチャーの正式な対応範囲外とする。
+
+### 17.5 ウィンドウサイズ
 
 現在の固定値:
 
@@ -525,17 +557,18 @@ v1.1.0 では日本語版・英語版 README に次を追記する。
 
 ## 20. バージョン方針
 
-今回のバージョンは `v1.1.1` とする。
+今回のバージョンは `v1.1.3` とする。
 
-- 秒針のひし形をオリジナル xclock に近づける
-- 標準表示でも分針の位置へ秒を反映する
-- 標準表示の1分更新と既存の URL/BAT オプションは維持する
-- 日本語版・英語版の仕様書を実装へ合わせる
+- 日本語など非 ASCII 文字を含む Windows パスから起動できない問題を修正する
+- PowerShell の `System.Uri` を使用して正規の file URL を生成する
+- URI 変換失敗時は Chrome を起動せずエラーを表示する
+- 時計表示、秒針、Android 復帰処理は変更しない
+- 日本語版・英語版の README と仕様書を更新する
 
-`MAJOR.MINOR.PATCH` の慣例により、既存機能の調整と修正として PATCH を上げる。
+`MAJOR.MINOR.PATCH` の慣例により、既存の Windows ランチャーの互換性修正として PATCH を上げる。
 
 ```text
-v1.1.0 → v1.1.1
+v1.1.2 → v1.1.3
 ```
 
 ## 21. 実装後の確認項目
@@ -588,6 +621,10 @@ v1.1.0 → v1.1.1
 - `SHOW_SECONDS=1` で秒針あり
 - 幅と高さの設定が反映される
 - Chrome パス、プロファイル、HTML の場所を変更できる
+- 日本語を含むユーザー名やフォルダー名から起動できる
+- 空白を含むフォルダーパスから起動できる
+- `index.html` のパスが正規の file URL へ変換される
+- URI 変換に失敗した場合は Chrome を起動しない
 - ローカル file URL のクエリが正しく渡る
 - 既存の Chrome アプリモード起動が維持される
 

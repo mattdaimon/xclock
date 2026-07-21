@@ -24,7 +24,6 @@ rem Internal processing
 rem Normally, do not edit below this line
 rem ============================================================
 set "XCLOCK_QUERY="
-set "XCLOCK_URL_PATH=%XCLOCK_HTML:\=/%"
 
 if "%SHOW_SECONDS%"=="1" (
   set "XCLOCK_QUERY=?seconds=1"
@@ -32,14 +31,27 @@ if "%SHOW_SECONDS%"=="1" (
 
 if not exist "%CHROME%" (
   echo Google Chrome was not found:
-  echo %CHROME%
+  echo "%CHROME%"
   pause
   exit /b 1
 )
 
 if not exist "%XCLOCK_HTML%" (
   echo index.html was not found:
-  echo %XCLOCK_HTML%
+  echo "%XCLOCK_HTML%"
+  pause
+  exit /b 1
+)
+
+rem Convert the Windows path to an encoded file URL.
+for /f "usebackq delims=" %%I in (`
+  powershell.exe -NoProfile -Command ^
+  "[System.Uri]::new((Get-Item -LiteralPath $env:XCLOCK_HTML).FullName).AbsoluteUri"
+`) do set "XCLOCK_URL=%%I"
+
+if not defined XCLOCK_URL (
+  echo Failed to create the file URL:
+  echo "%XCLOCK_HTML%"
   pause
   exit /b 1
 )
@@ -47,6 +59,6 @@ if not exist "%XCLOCK_HTML%" (
 start "" "%CHROME%" ^
   --user-data-dir="%XCLOCK_PROFILE%" ^
   --window-size=%WINDOW_WIDTH%,%WINDOW_HEIGHT% ^
-  --app="file:///%XCLOCK_URL_PATH%%XCLOCK_QUERY%"
+  --app="%XCLOCK_URL%%XCLOCK_QUERY%"
 
 endlocal
