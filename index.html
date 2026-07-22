@@ -23,12 +23,14 @@
 
       const params = new URLSearchParams(window.location.search);
       const showSeconds = params.get("seconds") === "1";
+      const keepAwake = params.get("wake") === "1";
 
       const canvas = document.getElementById("clock");
       const ctx = canvas.getContext("2d");
       let cssSize = 0;
       let dpr = 1;
       let timerId = null;
+      let wakeLock = null;
 
       function resizeCanvas() {
         cssSize = Math.floor(Math.min(window.innerWidth, window.innerHeight));
@@ -143,6 +145,22 @@
         ctx.fill();
       }
 
+      async function requestWakeLock() {
+        if (!keepAwake || !("wakeLock" in navigator) || document.hidden || wakeLock !== null) {
+          return;
+        }
+
+        try {
+          wakeLock = await navigator.wakeLock.request("screen");
+          wakeLock.addEventListener("release", () => {
+            wakeLock = null;
+          });
+        } catch (error) {
+          wakeLock = null;
+          console.warn("Screen Wake Lock could not be acquired:", error);
+        }
+      }
+
       function scheduleNextDraw() {
         if (timerId !== null) {
           clearTimeout(timerId);
@@ -170,6 +188,7 @@
             resizeCanvas();
             drawClock();
             scheduleNextDraw();
+            requestWakeLock();
           }, 300);
         }
       });
@@ -177,6 +196,7 @@
       resizeCanvas();
       drawClock();
       scheduleNextDraw();
+      requestWakeLock();
     })();
   </script>
 </body>

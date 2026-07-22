@@ -27,6 +27,14 @@ With second hand:
 
 https://mattdaimon.github.io/xclock/?seconds=1
 
+Prevent automatic screen sleep:
+
+https://mattdaimon.github.io/xclock/?wake=1
+
+With second hand and screen wake lock:
+
+https://mattdaimon.github.io/xclock/?seconds=1&wake=1
+
 Development
 -----------
 
@@ -54,6 +62,7 @@ Features
 - No external libraries
 - Analog clock without a second hand by default
 - Optional xclock-style second hand with `?seconds=1`
+- Optional screen wake-lock request with `?wake=1` in supported browsers
 - One-second step movement when the second hand is enabled
 - With seconds enabled, the minute hand advances each second and the hour hand advances once per minute
 - The next update is aligned to the next second or minute boundary
@@ -154,6 +163,7 @@ The settings most likely to be changed are grouped at the top of xclock.bat:
   set "WINDOW_WIDTH=200"
   set "WINDOW_HEIGHT=200"
   set "SHOW_SECONDS=0"
+  set "KEEP_AWAKE=0"
 
 Change `WINDOW_WIDTH` and `WINDOW_HEIGHT` to use another initial size.
 The clock itself redraws to fit the current window.
@@ -167,6 +177,22 @@ For the Web version, append `?seconds=1` to the URL:
   https://mattdaimon.github.io/xclock/?seconds=1
 
 The only enabled value is `1`. No parameter, `0`, `true`, and other values keep the second hand hidden.
+
+To request that the screen remain awake, change the setting to:
+
+  set "KEEP_AWAKE=1"
+
+For the Web version, append `?wake=1` to the URL:
+
+  https://mattdaimon.github.io/xclock/?wake=1
+
+To combine it with the second hand, separate the two parameters with `&`:
+
+  https://mattdaimon.github.io/xclock/?seconds=1&wake=1
+
+`wake=1` asks a supported browser to prevent automatic screen dimming or locking.
+It does not undo a manual device lock, and the request may be rejected or released because of power-saving mode, browser policy, operating-system behavior, or device state.
+The clock continues to work normally when the API is unsupported or the request fails.
 
 
 Chrome location

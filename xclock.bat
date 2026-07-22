@@ -7,6 +7,7 @@ rem ============================================================
 set "WINDOW_WIDTH=200"
 set "WINDOW_HEIGHT=200"
 set "SHOW_SECONDS=0"
+set "KEEP_AWAKE=0"
 
 rem ============================================================
 rem Google Chrome settings
@@ -27,6 +28,14 @@ set "XCLOCK_QUERY="
 
 if "%SHOW_SECONDS%"=="1" (
   set "XCLOCK_QUERY=?seconds=1"
+)
+
+if "%KEEP_AWAKE%"=="1" (
+  if defined XCLOCK_QUERY (
+    set "XCLOCK_QUERY=%XCLOCK_QUERY%&wake=1"
+  ) else (
+    set "XCLOCK_QUERY=?wake=1"
+  )
 )
 
 if not exist "%CHROME%" (

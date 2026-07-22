@@ -4,10 +4,11 @@
 
 この文書は、HTML5 Canvas版 xclock の設計仕様を記録する。
 
-- 現行版: v1.1.3
+- 現行版: v1.1.4
 - v1.1.2 までの時計表示、秒針、Android 復帰処理を維持する
-- v1.1.3 では、日本語など非 ASCII 文字を含む Windows パスに対応する
-- 本書には v1.1.3 で実装した値と動作を記録する
+- v1.1.3 では、日本語など非 ASCII 文字を含む Windows パスに対応した
+- v1.1.4 では、任意の画面消灯抑制オプションを追加する
+- 本書には v1.1.4 で実装した値と動作を記録する
 
 README は利用者向けの説明を担当し、本書は内部仕様、設計判断、オリジナル xclock との対応関係を担当する。
 
@@ -399,7 +400,52 @@ drawTriangleHand(...); // Minute hand
 
 描画順は実装後にオリジナル画像と比較し、必要な場合のみ変更する。中心円の寸法は標準表示を変えないため原則変更しない。
 
-## 16. 処理負荷
+## 16. v1.1.4 Wake Lock オプション
+
+### 16.1 有効化方法
+
+正式な URL パラメータは次のとおり。
+
+```text
+?wake=1
+```
+
+判定:
+
+- パラメータなし: Wake Lock を要求しない
+- `?wake=1`: Wake Lock を要求する
+- `?wake=0`: 要求しない
+- `?wake=true`: 要求しない
+- その他の値: 要求しない
+
+秒針と併用する場合:
+
+```text
+?seconds=1&wake=1
+```
+
+実装上は `seconds` と同じ `URLSearchParams` から独立して取得する。
+
+```javascript
+const params = new URLSearchParams(window.location.search);
+const showSeconds = params.get("seconds") === "1";
+const keepAwake = params.get("wake") === "1";
+```
+
+### 16.2 動作
+
+`wake=1` の場合のみ Screen Wake Lock API の `navigator.wakeLock.request("screen")` を要求する。
+この機能は端末の手動ロックを解除しない。ブラウザ、OS、省電力モード、権限設定、端末状態などにより、要求が拒否または解除される場合がある。
+
+API が存在しない場合、または取得に失敗した場合も時計本体の表示と更新は継続する。失敗は `console.warn()` のみに記録し、利用者向けエラー画面は表示しない。
+
+### 16.3 表示復帰時の再取得
+
+Wake Lock はページが非表示になると解除される場合がある。そのため、既存の `visibilitychange` 復帰処理で Canvas の再調整とタイマー再設定を行った後、`wake=1` の場合に再取得を試みる。
+
+重複取得を避けるため、Wake Lock オブジェクトが保持されている間は新しい要求を行わない。`release` イベントを受けた場合は保持値を `null` に戻す。
+
+## 17. 処理負荷
 
 秒針ありでは 1 分に 1 回から 1 秒に 1 回へ再描画回数が増えるが、対象は 200×200 程度の小さな Canvas である。
 
@@ -414,9 +460,9 @@ drawTriangleHand(...); // Minute hand
 
 毎秒 60 フレームの連続アニメーションではなく毎秒 1 回の描画であり、実用上の負荷は小さい。`requestAnimationFrame()` は使用しない。
 
-## 17. xclock.bat 仕様
+## 18. xclock.bat 仕様
 
-### 17.1 設定項目の整理
+### 18.1 設定項目の整理
 
 変更可能な値をファイル先頭へ用途別にまとめる。
 
@@ -427,6 +473,7 @@ rem ============================================================
 set "WINDOW_WIDTH=200"
 set "WINDOW_HEIGHT=200"
 set "SHOW_SECONDS=0"
+set "KEEP_AWAKE=0"
 
 rem ============================================================
 rem Google Chrome settings
@@ -449,12 +496,13 @@ rem Normally, do not edit below this line
 rem ============================================================
 ```
 
-### 17.2 秒針指定
+### 18.2 URL オプション指定
 
 - `SHOW_SECONDS=1`: 秒針あり
-- その他: 秒針なし
+- `KEEP_AWAKE=1`: 画面の自動消灯抑制を要求
+- その他の値: 各機能を無効化
 
-秒針ありの場合のみ、クエリ文字列を生成する。
+有効な設定だけを独立した URL パラメータとしてクエリ文字列へ追加する。
 
 ```bat
 set "XCLOCK_QUERY="
@@ -462,9 +510,24 @@ set "XCLOCK_QUERY="
 if "%SHOW_SECONDS%"=="1" (
   set "XCLOCK_QUERY=?seconds=1"
 )
+
+if "%KEEP_AWAKE%"=="1" (
+  if defined XCLOCK_QUERY (
+    set "XCLOCK_QUERY=%XCLOCK_QUERY%&wake=1"
+  ) else (
+    set "XCLOCK_QUERY=?wake=1"
+  )
+)
 ```
 
-### 17.3 ローカル file URL
+生成例:
+
+- 両方無効: クエリなし
+- 秒針のみ: `?seconds=1`
+- Wake Lock のみ: `?wake=1`
+- 両方有効: `?seconds=1&wake=1`
+
+### 18.3 ローカル file URL
 
 `%~dp0` で取得した Windows パスを文字列置換だけで file URL へ変換しない。
 日本語、空白、その他の非 ASCII 文字を含む可能性があるため、PowerShell の
@@ -485,7 +548,7 @@ for /f "usebackq delims=" %%I in (`
 4. `System.Uri.AbsoluteUri` で正規の file URL へ変換する
 5. PowerShell の標準出力を `for /f` で `XCLOCK_URL` へ格納する
 
-Chrome 起動時は、変換済み URL へ秒針用クエリ文字列を付加する。
+Chrome 起動時は、変換済み URL へ生成済みクエリ文字列を付加する。
 
 ```bat
 --app="%XCLOCK_URL%%XCLOCK_QUERY%"
@@ -502,7 +565,7 @@ if not defined XCLOCK_URL (
 )
 ```
 
-### 17.4 PowerShell 依存
+### 18.4 PowerShell 依存
 
 v1.1.3 以降の `xclock.bat` は Windows PowerShell の `powershell.exe` を使用する。
 目的は Windows のローカルファイルパスを正規の file URL へ変換することであり、
@@ -512,7 +575,7 @@ v1.1.3 以降の `xclock.bat` は Windows PowerShell の `powershell.exe` を使
 PowerShell 自体が組織のセキュリティポリシーで無効化されている環境は、
 BAT ランチャーの正式な対応範囲外とする。
 
-### 17.5 ウィンドウサイズ
+### 18.5 ウィンドウサイズ
 
 現在の固定値:
 
@@ -528,66 +591,74 @@ BAT ランチャーの正式な対応範囲外とする。
 
 秒針用の別 BAT は作らない。
 
-## 18. ブラウザ運用
+## 19. ブラウザ運用
 
-### 18.1 Chrome
+### 19.1 Chrome
 
 - ローカル版の正式運用
 - `--app` を使用する
 - 専用 `user-data-dir` を使用する
 - 200×200 程度の小窓として利用する
 
-### 18.2 Firefox
+### 19.2 Firefox
 
 - GitHub Pages 版を通常の Web ページとして表示できる
 - 小型アプリウィンドウには最小幅の制約があるため、現時点では Chrome と同じ正式運用にはしない
 - Firefox の制約は README には記載しない
 
-## 19. README 更新範囲
+## 20. README 更新範囲
 
-v1.1.0 では日本語版・英語版 README に次を追記する。
+v1.1.4 では日本語版・英語版 README に次を追記する。
 
 - 標準では秒針なし
 - `?seconds=1` で秒針表示
 - 秒針は 1 秒ごとのステップ運針
 - BAT では `SHOW_SECONDS=1` を設定
 - BAT で幅と高さを変更可能
+- `?wake=1` と `KEEP_AWAKE=1` による画面消灯抑制オプション
+- Wake Lock が保証動作ではないことと、失敗時も時計表示を継続すること
 
 ひし形の寸法、針の計算式、内部描画方式は README へ記載しない。
 
-## 20. バージョン方針
+## 21. バージョン方針
 
-今回のバージョンは `v1.1.3` とする。
+今回のバージョンは `v1.1.4` とする。
 
-- 日本語など非 ASCII 文字を含む Windows パスから起動できない問題を修正する
-- PowerShell の `System.Uri` を使用して正規の file URL を生成する
-- URI 変換失敗時は Chrome を起動せずエラーを表示する
-- 時計表示、秒針、Android 復帰処理は変更しない
+- `wake=1` の場合だけ Screen Wake Lock API を要求する
+- `seconds` と `wake` を独立した URL パラメータとして扱う
+- BAT に `KEEP_AWAKE=0/1` を追加する
+- 非対応ブラウザや取得失敗時も時計表示を継続する
+- 非表示からの復帰時に Wake Lock の再取得を試みる
+- PWA、Service Worker、マニフェストは追加しない
+- 時計の描画値、秒針の形状、時刻計算は変更しない
 - 日本語版・英語版の README と仕様書を更新する
 
-`MAJOR.MINOR.PATCH` の慣例により、既存の Windows ランチャーの互換性修正として PATCH を上げる。
+`MAJOR.MINOR.PATCH` の慣例により、既存機能へ任意オプションを小さく追加する PATCH として扱う。
 
 ```text
-v1.1.2 → v1.1.3
+v1.1.3 → v1.1.4
 ```
 
-## 21. 実装後の確認項目
+## 22. 実装後の確認項目
 
-### 21.1 標準表示
+### 22.1 標準表示
 
 - パラメータなしで v1.0.1 と同じ表示
 - 秒針なし
 - 分境界で更新
 - 目盛り、時針、分針、中心円に意図しない変更がない
 
-### 21.2 URL パラメータ
+### 22.2 URL パラメータ
 
 - `?seconds=1` で秒針あり
 - `?seconds=0` で秒針なし
 - `?seconds=true` で秒針なし
 - 不明値で秒針なし
+- `?wake=1` で Wake Lock を要求
+- `?wake=0`、`?wake=true`、不明値では Wake Lock を要求しない
+- `?seconds=1&wake=1` で両方が有効
 
-### 21.3 秒針の外観
+### 22.3 秒針の外観
 
 - 細い直線として見える
 - 先端寄りにひし形がある
@@ -598,7 +669,7 @@ v1.1.2 → v1.1.3
 - 高 DPI 環境で線が消えない
 - オリジナル xclock に近く見える
 
-### 21.4 針の動き
+### 22.4 針の動き
 
 - 秒針が 1 秒ごとに 1 目盛り進む
 - 分針が毎秒わずかに進む
@@ -607,18 +678,25 @@ v1.1.2 → v1.1.3
 - ミリ秒によるスムーズ運針にならない
 - 0、15、30、45 秒で正しい方向を指す
 
-### 21.5 タイマーとイベント
+### 22.5 タイマーとイベント
 
 - 秒境界へおおむね同期する
 - 長時間動作してもずれが累積しない
 - 二重タイマーが発生しない
 - 非表示から戻ると正しい時刻へ復帰する
 - リサイズ後も比率が維持される
+- `wake=1` では初回表示時に Wake Lock を要求する
+- 非表示から戻った際に Wake Lock の再取得を試みる
+- API 非対応・取得拒否・解除後も時計表示を継続する
+- Wake Lock の重複要求を行わない
 
-### 21.6 BAT
+### 22.6 BAT
 
 - `SHOW_SECONDS=0` で秒針なし
 - `SHOW_SECONDS=1` で秒針あり
+- `KEEP_AWAKE=0` で Wake Lock なし
+- `KEEP_AWAKE=1` で `wake=1` を付加
+- 2つの設定を有効にすると `?seconds=1&wake=1` を付加
 - 幅と高さの設定が反映される
 - Chrome パス、プロファイル、HTML の場所を変更できる
 - 日本語を含むユーザー名やフォルダー名から起動できる
@@ -628,7 +706,7 @@ v1.1.2 → v1.1.3
 - ローカル file URL のクエリが正しく渡る
 - 既存の Chrome アプリモード起動が維持される
 
-## 22. 既知の調整項目
+## 23. 既知の調整項目
 
 実装後に最終確定する項目:
 
@@ -641,7 +719,7 @@ v1.1.2 → v1.1.3
 
 これらは仕様漏れではなく、実画面を見ながら決める視覚・実機調整値である。
 
-## 23. 参考資料
+## 24. 参考資料
 
 - X.Org xclock manual: https://www.x.org/archive/X11R7.5/doc/man/man1/xclock.1.html
 - X.Org xclock project: https://gitlab.freedesktop.org/xorg/app/xclock

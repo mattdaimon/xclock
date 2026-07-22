@@ -4,10 +4,11 @@
 
 This document records the design specification of the HTML5 Canvas version of xclock.
 
-- Current version: v1.1.3
+- Current version: v1.1.4
 - Keeps the clock display, second-hand behavior, and Android resume handling from v1.1.2
-- v1.1.3 adds support for Windows paths containing Japanese and other non-ASCII characters
-- This document records the values and behavior implemented in v1.1.3
+- v1.1.3 added support for Windows paths containing Japanese and other non-ASCII characters
+- v1.1.4 adds an optional screen wake-lock mode
+- This document records the values and behavior implemented in v1.1.4
 
 The README files are user-facing documents. This specification describes internal behavior, design decisions, and the relationship to the original X11 xclock.
 
@@ -397,7 +398,52 @@ Drawing the second hand first allows the existing hands and center circle to hid
 
 The final order will be verified against the original xclock image after implementation. The center-circle dimensions should normally remain unchanged to preserve the standard mode.
 
-## 16. Performance
+## 16. v1.1.4 Wake Lock Option
+
+### 16.1 Enabling the Option
+
+The official URL parameter is:
+
+```text
+?wake=1
+```
+
+Behavior:
+
+- No parameter: do not request a wake lock
+- `?wake=1`: request a wake lock
+- `?wake=0`: do not request one
+- `?wake=true`: do not request one
+- Any other value: do not request one
+
+To combine it with the second hand:
+
+```text
+?seconds=1&wake=1
+```
+
+Both options are read independently from the same `URLSearchParams` object.
+
+```javascript
+const params = new URLSearchParams(window.location.search);
+const showSeconds = params.get("seconds") === "1";
+const keepAwake = params.get("wake") === "1";
+```
+
+### 16.2 Behavior
+
+Only when `wake=1` is present, request `navigator.wakeLock.request("screen")` from the Screen Wake Lock API.
+This feature does not undo a manual device lock. The request may be rejected or released because of browser behavior, operating-system policy, power-saving mode, permission settings, or device state.
+
+When the API is unavailable or acquisition fails, clock drawing and updates continue normally. The failure is recorded only with `console.warn()`; no user-facing error screen is shown.
+
+### 16.3 Reacquisition after Visibility Changes
+
+A wake lock may be released when the page becomes hidden. After the existing `visibilitychange` resume logic readjusts the Canvas and reschedules the timer, it attempts to reacquire the wake lock when `wake=1` is enabled.
+
+To prevent duplicate requests, no new request is made while a wake-lock object is held. When its `release` event fires, the stored value is reset to `null`.
+
+## 17. Performance
 
 With the second hand enabled, drawing frequency increases from once per minute to once per second. The Canvas is only about 200×200.
 
@@ -412,9 +458,9 @@ Each redraw consists mainly of:
 
 This is one redraw per second, not a 60-frames-per-second animation. The practical CPU cost is expected to remain small. `requestAnimationFrame()` will not be used.
 
-## 17. xclock.bat Specification
+## 18. xclock.bat Specification
 
-### 17.1 Organized Settings
+### 18.1 Organized Settings
 
 Editable values will be grouped at the beginning of the file.
 
@@ -425,6 +471,7 @@ rem ============================================================
 set "WINDOW_WIDTH=200"
 set "WINDOW_HEIGHT=200"
 set "SHOW_SECONDS=0"
+set "KEEP_AWAKE=0"
 
 rem ============================================================
 rem Google Chrome settings
@@ -447,12 +494,13 @@ rem Normally, do not edit below this line
 rem ============================================================
 ```
 
-### 17.2 Second-Hand Setting
+### 18.2 URL Option Settings
 
-- `SHOW_SECONDS=1`: enabled
-- Any other value: disabled
+- `SHOW_SECONDS=1`: enable the second hand
+- `KEEP_AWAKE=1`: request prevention of automatic screen sleep
+- Any other value: disable the corresponding feature
 
-Only when enabled, the batch file creates a query string.
+Only enabled settings are added as independent URL parameters.
 
 ```bat
 set "XCLOCK_QUERY="
@@ -460,9 +508,24 @@ set "XCLOCK_QUERY="
 if "%SHOW_SECONDS%"=="1" (
   set "XCLOCK_QUERY=?seconds=1"
 )
+
+if "%KEEP_AWAKE%"=="1" (
+  if defined XCLOCK_QUERY (
+    set "XCLOCK_QUERY=%XCLOCK_QUERY%&wake=1"
+  ) else (
+    set "XCLOCK_QUERY=?wake=1"
+  )
+)
 ```
 
-### 17.3 Local file URL
+Generated examples:
+
+- Both disabled: no query string
+- Second hand only: `?seconds=1`
+- Wake lock only: `?wake=1`
+- Both enabled: `?seconds=1&wake=1`
+
+### 18.3 Local file URL
 
 Do not convert the Windows path obtained from `%~dp0` by plain string replacement.
 Because the path may contain Japanese, spaces, or other non-ASCII characters,
@@ -483,7 +546,7 @@ Processing steps:
 4. Convert it into a valid file URL with `System.Uri.AbsoluteUri`
 5. Capture the PowerShell output in `XCLOCK_URL` with `for /f`
 
-Append the second-hand query string to the converted URL when Chrome starts.
+Append the generated query string to the converted URL when Chrome starts.
 
 ```bat
 --app="%XCLOCK_URL%%XCLOCK_QUERY%"
@@ -500,7 +563,7 @@ if not defined XCLOCK_URL (
 )
 ```
 
-### 17.4 PowerShell dependency
+### 18.4 PowerShell dependency
 
 Starting with v1.1.3, `xclock.bat` uses Windows PowerShell `powershell.exe`.
 Its purpose is only to convert a local Windows path into a valid file URL.
@@ -510,7 +573,7 @@ from being loaded.
 Environments where PowerShell itself is disabled by organizational security
 policy are outside the supported scope of the batch launcher.
 
-### 17.5 Window Size
+### 18.5 Window Size
 
 Replace the current fixed option:
 
@@ -526,66 +589,74 @@ with:
 
 No separate second-hand batch file will be added.
 
-## 18. Browser Usage
+## 19. Browser Usage
 
-### 18.1 Chrome
+### 19.1 Chrome
 
 - Official local-app usage
 - Uses `--app`
 - Uses a dedicated `user-data-dir`
 - Intended for an approximately 200×200 small window
 
-### 18.2 Firefox
+### 19.2 Firefox
 
 - Can display the GitHub Pages version as a normal web page
 - Current minimum app-window width prevents the same small-window usage as Chrome
 - This Firefox limitation will not be documented in the README files
 
-## 19. README Changes
+## 20. README Changes
 
-For v1.1.0, both Japanese and English README files will mention:
+For v1.1.4, both Japanese and English README files will mention:
 
 - The second hand is disabled by default
 - Add `?seconds=1` to display it
 - The second hand moves in one-second steps
 - Set `SHOW_SECONDS=1` in the batch file
 - Window width and height can be configured in the batch file
+- The `?wake=1` and `KEEP_AWAKE=1` screen wake-lock option
+- Wake Lock is not guaranteed and clock operation continues when acquisition fails
 
 Internal dimensions, calculation formulas, and drawing details will remain in this specification rather than the README.
 
-## 20. Versioning
+## 21. Versioning
 
-This release is `v1.1.3`.
+This release is `v1.1.4`.
 
-- Fixes startup from Windows paths containing Japanese or other non-ASCII characters
-- Uses PowerShell and `System.Uri` to generate a valid file URL
-- Stops before launching Chrome when URI conversion fails
-- Keeps the clock display, second-hand behavior, and Android resume handling unchanged
+- Requests the Screen Wake Lock API only when `wake=1` is enabled
+- Treats `seconds` and `wake` as independent URL parameters
+- Adds `KEEP_AWAKE=0/1` to the batch launcher
+- Keeps the clock running when the API is unsupported or acquisition fails
+- Attempts to reacquire the wake lock after the page becomes visible again
+- Does not add a PWA manifest, Service Worker, or other PWA functionality
+- Does not change clock drawing values, second-hand shape, or time calculations
 - Updates the Japanese and English README and specification documents
 
-Under the common `MAJOR.MINOR.PATCH` convention, this is a PATCH release because it corrects compatibility in the existing Windows launcher.
+Under the common `MAJOR.MINOR.PATCH` convention, this is a PATCH release because it adds a small optional behavior to the existing application.
 
 ```text
-v1.1.2 → v1.1.3
+v1.1.3 → v1.1.4
 ```
 
-## 21. Post-Implementation Test Checklist
+## 22. Post-Implementation Test Checklist
 
-### 21.1 Standard Mode
+### 22.1 Standard Mode
 
 - No parameter produces the same appearance as v1.0.1
 - No second hand
 - Updates on the minute boundary
 - No unintended changes to ticks, hands, or center circle
 
-### 21.2 URL Parameters
+### 22.2 URL Parameters
 
 - `?seconds=1` enables the second hand
 - `?seconds=0` disables it
 - `?seconds=true` disables it
 - Unknown values disable it
+- `?wake=1` requests a wake lock
+- `?wake=0`, `?wake=true`, and unknown values do not request one
+- `?seconds=1&wake=1` enables both options
 
-### 21.3 Second-Hand Appearance
+### 22.3 Second-Hand Appearance
 
 - Appears as a thin line
 - Has a diamond near the tip
@@ -596,7 +667,7 @@ v1.1.2 → v1.1.3
 - Remains visible on high-DPI displays
 - Looks close to the original xclock
 
-### 21.4 Hand Movement
+### 22.4 Hand Movement
 
 - Second hand advances one tick per second
 - Minute hand advances slightly every second
@@ -605,18 +676,25 @@ v1.1.2 → v1.1.3
 - No millisecond-based smooth movement
 - Correct positions at 0, 15, 30, and 45 seconds
 
-### 21.5 Timers and Events
+### 22.5 Timers and Events
 
 - Updates approximately on second boundaries
 - No accumulated long-term drift
 - No duplicate timers
 - Restores the correct time after becoming visible
 - Maintains proportions after resizing
+- `wake=1` requests a wake lock on initial display
+- Becoming visible again attempts to reacquire the wake lock
+- Clock operation continues when the API is unsupported, denied, or later released
+- No duplicate wake-lock request is made while one is held
 
-### 21.6 Batch File
+### 22.6 Batch File
 
 - `SHOW_SECONDS=0` disables the second hand
 - `SHOW_SECONDS=1` enables it
+- `KEEP_AWAKE=0` omits the wake option
+- `KEEP_AWAKE=1` appends `wake=1`
+- Enabling both settings appends `?seconds=1&wake=1`
 - Width and height settings work
 - Chrome path, profile path, and HTML path remain configurable
 - Starts from user names and folder names containing Japanese characters
@@ -626,7 +704,7 @@ v1.1.2 → v1.1.3
 - The local file URL query is passed correctly
 - Existing Chrome app-mode startup remains functional
 
-## 22. Known Tuning Items
+## 23. Known Tuning Items
 
 The following will be finalized after implementation and visual testing:
 
@@ -639,7 +717,7 @@ The following will be finalized after implementation and visual testing:
 
 These are visual and environment-specific tuning values, not missing functional requirements.
 
-## 23. References
+## 24. References
 
 - X.Org xclock manual: https://www.x.org/archive/X11R7.5/doc/man/man1/xclock.1.html
 - X.Org xclock project: https://gitlab.freedesktop.org/xorg/app/xclock
